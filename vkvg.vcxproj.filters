@@ -1,0 +1,98 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Source Files\vkvg">
+      <UniqueIdentifier>{b08e14a9-1900-423b-96ae-e7224158d5d4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\vkvg\src">
+      <UniqueIdentifier>{32fdcc4f-87f6-4e21-bbb1-dae1d6e15bd1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\vkh">
+      <UniqueIdentifier>{bf9e586a-e160-4c27-a0dd-d99291b5fcf9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\vkh\src">
+      <UniqueIdentifier>{6e781824-7e37-4804-9438-36437d510a05}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="vkvg\src\cross_os.c">
+      <Filter>Source Files\vkvg\src</Filter>
+    </ClCompile>
+    <ClCompile Include="vkvg\src\vkvg_context.c">
+      <Filter>Source Files\vkvg\src</Filter>
+    </ClCompile>
+    <ClCompile Include="vkvg\src\vkvg_context_internal.c">
+      <Filter>Source Files\vkvg\src</Filter>
+    </ClCompile>
+    <ClCompile Include="vkvg\src\vkvg_device.c">
+      <Filter>Source Files\vkvg\src</Filter>
+    </ClCompile>
+    <ClCompile Include="vkvg\src\vkvg_device_internal.c">
+      <Filter>Source Files\vkvg\src</Filter>
+    </ClCompile>
+    <ClCompile Include="vkvg\src\vkvg_experimental.c">
+      <Filter>Source Files\vkvg\src</Filter>
+    </ClCompile>
+    <ClCompile Include="vkvg\src\vkvg_fonts.c">
+      <Filter>Source Files\vkvg\src</Filter>
+    </ClCompile>
+    <ClCompile Include="vkvg\src\vkvg_matrix.c">
+      <Filter>Source Files\vkvg\src</Filter>
+    </ClCompile>
+    <ClCompile Include="vkvg\src\vkvg_pattern.c">
+      <Filter>Source Files\vkvg\src</Filter>
+    </ClCompile>
+    <ClCompile Include="vkvg\src\vkvg_surface.c">
+      <Filter>Source Files\vkvg\src</Filter>
+    </ClCompile>
+    <ClCompile Include="vkvg\src\vkvg_surface_internal.c">
+      <Filter>Source Files\vkvg\src</Filter>
+    </ClCompile>
+    <ClCompile Include="vkvg\vkh\src\vkh_app.c">
+      <Filter>Source Files\vkh\src</Filter>
+    </ClCompile>
+    <ClCompile Include="vkvg\vkh\src\vkh_buffer.c">
+      <Filter>Source Files\vkh\src</Filter>
+    </ClCompile>
+    <ClCompile Include="vkvg\vkh\src\vkh_device.c">
+      <Filter>Source Files\vkh\src</Filter>
+    </ClCompile>
+    <ClCompile Include="vkvg\vkh\src\vkh_image.c">
+      <Filter>Source Files\vkh\src</Filter>
+    </ClCompile>
+    <ClCompile Include="vkvg\vkh\src\vkh_phyinfo.c">
+      <Filter>Source Files\vkh\src</Filter>
+    </ClCompile>
+    <ClCompile Include="vkvg\vkh\src\vkh_presenter.c">
+      <Filter>Source Files\vkh\src</Filter>
+    </ClCompile>
+    <ClCompile Include="vkvg\vkh\src\vkh_queue.c">
+      <Filter>Source Files\vkh\src</Filter>
+    </ClCompile>
+    <ClCompile Include="vkvg\vkh\src\vkhelpers.c">
+      <Filter>Source Files\vkh\src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="vkvg.def">
+      <Filter>Source Files</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="vkvg\include\vkvg.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
