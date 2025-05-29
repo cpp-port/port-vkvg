@@ -1,4 +1,4 @@
 [submodule "vkvg"]
 	path = vkvg
-	url = ../vkvg
+	url = https://github.com/cpp-port/vkvg
 	branch = master
