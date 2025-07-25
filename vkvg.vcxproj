@@ -112,7 +112,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>VKVG_USE_FREETYPE;VKVG_PREMULT_ALPHA;ENABLE_VALIDATION=1;VKVG_SHARED_BUILD;VKVG_ENABLE_VK_SCALAR_BLOCK_LAYOUT;_DEBUG;VKVG_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>VKVG_USE_FREETYPE;VKVG_PREMULT_ALPHA;ENABLE_VALIDATION=1;ENABLE_DBG_UTILS=1;ENABLE_RENDERDOC=1;VKVG_SHARED_BUILD;VKVG_ENABLE_VK_SCALAR_BLOCK_LAYOUT;_DEBUG;VKVG_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(ProjectDir)/vkvg/vkh/src;$(SolutionDir)../port/include;$(SolutionDir)../operating_system/operating_system-windows/configuration;$(SolutionDir)../operating_system/operating_system-windows/configuration/$(RootNamespace);$(SolutionDir)../operating_system/operating_system-windows/include;$(ProjectDir)/include/$(RootNamespace);$(ProjectDir)/include;$(ProjectDir);$(SolutionDir)../include</AdditionalIncludeDirectories>
     </ClCompile>
