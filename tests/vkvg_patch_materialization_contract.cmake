@@ -240,3 +240,32 @@ foreach(scalar_layout_definition
     message(FATAL_ERROR "CMake target is missing VKVG scalar layout support: ${scalar_layout_definition}")
   endif()
 endforeach()
+
+# MSBuild places generated files below the enclosing SceneFoundry repository.
+# Verify that parent Git discovery cannot turn patch application into a no-op
+# for ignored intermediate files.
+get_filename_component(in_repository_output
+  "${WRAPPER_DIR}/../../../time-windows/vkvg-patch-contract"
+  ABSOLUTE)
+file(REMOVE_RECURSE "${in_repository_output}")
+execute_process(
+  COMMAND "${CMAKE_COMMAND}"
+    "-DVKVG_SOURCE_DIR=${pristine_source_dir}"
+    "-DVKVG_OUTPUT_DIR=${in_repository_output}"
+    "-DVKVG_PATCH_DIR=${patch_dir}"
+    -P "${materializer}"
+  RESULT_VARIABLE in_repository_result
+  OUTPUT_VARIABLE in_repository_stdout
+  ERROR_VARIABLE in_repository_stderr)
+if(NOT in_repository_result EQUAL 0)
+  message(FATAL_ERROR
+    "In-repository materialization failed (${in_repository_result})\n"
+    "${in_repository_stdout}\n${in_repository_stderr}")
+endif()
+file(READ "${in_repository_output}/src/vkvg_context_internal.c" in_repository_context)
+string(FIND "${in_repository_context}"
+  "leaked push-constant value" in_repository_clear)
+file(REMOVE_RECURSE "${in_repository_output}")
+if(in_repository_clear EQUAL -1)
+  message(FATAL_ERROR "In-repository materialization left generated sources pristine")
+endif()
