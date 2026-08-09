@@ -33,13 +33,13 @@
     <ClCompile Include="vkvg\src\vkvg_context.c">
       <Filter>Source Files\vkvg\src</Filter>
     </ClCompile>
-    <ClCompile Include="vkvg\src\vkvg_context_internal.c">
+    <ClCompile Include="$(IntDir)vkvg-patched\src\vkvg_context_internal.c">
       <Filter>Source Files\vkvg\src</Filter>
     </ClCompile>
-    <ClCompile Include="vkvg\src\vkvg_device.c">
+    <ClCompile Include="$(IntDir)vkvg-patched\src\vkvg_device.c">
       <Filter>Source Files\vkvg\src</Filter>
     </ClCompile>
-    <ClCompile Include="vkvg\src\vkvg_device_internal.c">
+    <ClCompile Include="$(IntDir)vkvg-patched\src\vkvg_device_internal.c">
       <Filter>Source Files\vkvg\src</Filter>
     </ClCompile>
     <ClCompile Include="vkvg\src\vkvg_experimental.c">

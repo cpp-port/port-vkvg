@@ -74,6 +74,11 @@
     <Import Project="..\..\..\operating_system\operating_system-windows\port_release.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <VkvgPatchOutputDir>$(IntDir)vkvg-patched\</VkvgPatchOutputDir>
+    <VkvgPatchStamp>$(VkvgPatchOutputDir)vkvg-patches.stamp</VkvgPatchStamp>
+    <VkvgPatchCMakeExe Condition="'$(VkvgPatchCMakeExe)'==''">cmake</VkvgPatchCMakeExe>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -150,11 +155,35 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <VkvgPatchInput Include="$(ProjectDir)patches\materialize_vkvg_sources.cmake" />
+    <VkvgPatchInput Include="$(ProjectDir)patches\vkvg_patch_manifest.cmake" />
+    <VkvgPatchInput Include="$(ProjectDir)patches\0001-clear-fullscreen-bit-before-indexed-draw.patch" />
+    <VkvgPatchInput Include="$(ProjectDir)patches\0002-fix-non-zero-fill-winding.patch" />
+    <VkvgPatchInput Include="$(ProjectDir)patches\0003-honor-requested-sample-count.patch" />
+    <VkvgPatchInput Include="$(ProjectDir)patches\0004-strengthen-render-pass-handoffs.patch" />
+    <VkvgPatchInput Include="$(ProjectDir)vkvg\src\vkvg_context_internal.c" />
+    <VkvgPatchInput Include="$(ProjectDir)vkvg\src\vkvg_device.c" />
+    <VkvgPatchInput Include="$(ProjectDir)vkvg\src\vkvg_device_internal.c" />
+  </ItemGroup>
+  <Target Name="MaterializeVkvgPatchedSources"
+          BeforeTargets="ClCompile"
+          Inputs="@(VkvgPatchInput)"
+          Outputs="$(VkvgPatchStamp);$(IntDir)vkvg-patched\src\vkvg_context_internal.c;$(IntDir)vkvg-patched\src\vkvg_device.c;$(IntDir)vkvg-patched\src\vkvg_device_internal.c">
+    <Exec WorkingDirectory="$(ProjectDir)"
+          Command="&quot;$(VkvgPatchCMakeExe)&quot; -DVKVG_SOURCE_DIR=&quot;$(ProjectDir)vkvg&quot; -DVKVG_OUTPUT_DIR=&quot;$(VkvgPatchOutputDir)&quot; -DVKVG_PATCH_DIR=&quot;$(ProjectDir)patches&quot; -P &quot;$(ProjectDir)patches\materialize_vkvg_sources.cmake&quot;" />
+  </Target>
+  <ItemGroup>
     <ClCompile Include="vkvg\src\cross_os.c" />
     <ClCompile Include="vkvg\src\vkvg_context.c" />
-    <ClCompile Include="vkvg\src\vkvg_context_internal.c" />
-    <ClCompile Include="vkvg\src\vkvg_device.c" />
-    <ClCompile Include="vkvg\src\vkvg_device_internal.c" />
+    <ClCompile Include="$(IntDir)vkvg-patched\src\vkvg_context_internal.c">
+      <Link>vkvg\src\vkvg_context_internal.c</Link>
+    </ClCompile>
+    <ClCompile Include="$(IntDir)vkvg-patched\src\vkvg_device.c">
+      <Link>vkvg\src\vkvg_device.c</Link>
+    </ClCompile>
+    <ClCompile Include="$(IntDir)vkvg-patched\src\vkvg_device_internal.c">
+      <Link>vkvg\src\vkvg_device_internal.c</Link>
+    </ClCompile>
     <ClCompile Include="vkvg\src\vkvg_experimental.c" />
     <ClCompile Include="vkvg\src\vkvg_fonts.c" />
     <ClCompile Include="vkvg\src\vkvg_matrix.c" />

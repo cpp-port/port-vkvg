@@ -104,3 +104,27 @@ string(FIND "${device_internal_source}"
 if(sample_guard EQUAL -1 OR all_commands_stage EQUAL -1 OR multisample_store EQUAL -1)
   message(FATAL_ERROR "Missing staged device/render-pass fixes")
 endif()
+
+file(READ "${WRAPPER_DIR}/vkvg.vcxproj" vcxproj)
+foreach(required_text
+  "Name=\"MaterializeVkvgPatchedSources\""
+  "BeforeTargets=\"ClCompile\""
+  "$(IntDir)vkvg-patched\\src\\vkvg_context_internal.c"
+  "$(IntDir)vkvg-patched\\src\\vkvg_device.c"
+  "$(IntDir)vkvg-patched\\src\\vkvg_device_internal.c"
+  "materialize_vkvg_sources.cmake")
+  string(FIND "${vcxproj}" "${required_text}" position)
+  if(position EQUAL -1)
+    message(FATAL_ERROR "Visual Studio wrapper is missing: ${required_text}")
+  endif()
+endforeach()
+
+foreach(pristine_source
+  "vkvg\\src\\vkvg_context_internal.c"
+  "vkvg\\src\\vkvg_device.c"
+  "vkvg\\src\\vkvg_device_internal.c")
+  string(FIND "${vcxproj}" "ClCompile Include=\"${pristine_source}\"" position)
+  if(NOT position EQUAL -1)
+    message(FATAL_ERROR "Visual Studio compiles pristine patched source: ${pristine_source}")
+  endif()
+endforeach()
