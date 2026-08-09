@@ -1,4 +1,3 @@
 [submodule "vkvg"]
 	path = vkvg
 	url = ../vkvg
-	branch = master

@@ -1,0 +1,19 @@
+diff --git a/src/vkvg_context_internal.c b/src/vkvg_context_internal.c
+index eeaeb98..4765b51 100644
+--- a/src/vkvg_context_internal.c
++++ b/src/vkvg_context_internal.c
+@@ -556,6 +556,14 @@ void _emit_draw_cmd_undrawn_vertices(VkvgContext ctx) {
+ 
+     _ensure_renderpass_is_started(ctx);
+ 
++    // FULLSCREEN_BIT is a transient vertex-shader mode used by
++    // _draw_full_screen_quad.  Do not allow a saved/restored or otherwise
++    // leaked push-constant value to make ordinary pixel-coordinate geometry
++    // look like clip-space coordinates.
++    ctx->pushConsts.fsq_patternType &= ~FULLSCREEN_BIT;
++    CmdPushConstants(ctx->cmd, ctx->dev->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 24, 4,
++                     &ctx->pushConsts.fsq_patternType);
++
+ #ifdef VKVG_WIRED_DEBUG
+     if (vkvg_wired_debug & vkvg_wired_debug_mode_normal)
+         CmdDrawIndexed(ctx->cmd, ctx->indCount - ctx->curIndStart, 1, ctx->curIndStart, (int32_t)ctx->curVertOffset, 0);
