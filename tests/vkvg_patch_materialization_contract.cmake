@@ -76,10 +76,31 @@ if(NOT gitlink_result EQUAL 0 OR
 endif()
 
 file(READ "${staged_output_dir}/src/vkvg_context_internal.c" context_source)
+file(READ "${staged_output_dir}/src/vkvg_device.c" device_source)
+file(READ "${staged_output_dir}/src/vkvg_device_internal.c" device_internal_source)
 string(FIND "${context_source}"
   "ctx->pushConsts.fsq_patternType &= ~FULLSCREEN_BIT;" clear_position)
 string(FIND "${context_source}"
   "CmdDrawIndexed(ctx->cmd" draw_position)
 if(clear_position EQUAL -1 OR draw_position EQUAL -1 OR clear_position GREATER draw_position)
   message(FATAL_ERROR "Ordinary indexed draws do not restore FULLSCREEN_BIT state")
+endif()
+
+foreach(required_text
+  "float signedArea = 0.0f;"
+  "ecp_zcross(v0, v2, v1) * signedArea < 0")
+  string(FIND "${context_source}" "${required_text}" position)
+  if(position EQUAL -1)
+    message(FATAL_ERROR "Missing staged winding fix: ${required_text}")
+  endif()
+endforeach()
+
+string(FIND "${device_source}"
+  "if (!(counts & info->samples))" sample_guard)
+string(FIND "${device_internal_source}"
+  "VK_PIPELINE_STAGE_ALL_COMMANDS_BIT" all_commands_stage)
+string(FIND "${device_internal_source}"
+  "VK_ATTACHMENT_STORE_OP_STORE" multisample_store)
+if(sample_guard EQUAL -1 OR all_commands_stage EQUAL -1 OR multisample_store EQUAL -1)
+  message(FATAL_ERROR "Missing staged device/render-pass fixes")
 endif()

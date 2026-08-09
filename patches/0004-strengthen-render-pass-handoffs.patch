@@ -1,0 +1,55 @@
+diff --git a/src/vkvg_device_internal.c b/src/vkvg_device_internal.c
+index ee0478a..33a5f52 100644
+--- a/src/vkvg_device_internal.c
++++ b/src/vkvg_device_internal.c
+@@ -102,12 +102,14 @@ VkRenderPass _device_createRenderPassNoResolve(VkvgDevice dev, VkAttachmentLoadO
+                                                .pDepthStencilAttachment = &dsRef};
+ 
+     VkSubpassDependency dependencies[] = {
+-        {VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+-         VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+-         VK_DEPENDENCY_BY_REGION_BIT},
+-        {0, VK_SUBPASS_EXTERNAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+-         VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT,
+-         VK_DEPENDENCY_BY_REGION_BIT},
++        {VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
++         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_MEMORY_WRITE_BIT,
++         VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
++         0},
++        {0, VK_SUBPASS_EXTERNAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
++         VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
++         VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT,
++         0},
+     };
+ 
+     VkRenderPassCreateInfo renderPassInfo = {.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+@@ -125,7 +127,7 @@ VkRenderPass _device_createRenderPassMS(VkvgDevice dev, VkAttachmentLoadOp loadO
+     VkAttachmentDescription attColor        = {.format         = FB_COLOR_FORMAT,
+                                                .samples        = dev->samples,
+                                                .loadOp         = loadOp,
+-                                               .storeOp        = VK_ATTACHMENT_STORE_OP_DONT_CARE,
++                                               .storeOp        = VK_ATTACHMENT_STORE_OP_STORE,
+                                                .stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                                                .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                                                .initialLayout  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+@@ -159,12 +161,14 @@ VkRenderPass _device_createRenderPassMS(VkvgDevice dev, VkAttachmentLoadOp loadO
+                                                .pDepthStencilAttachment = &dsRef};
+ 
+     VkSubpassDependency dependencies[] = {
+-        {VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+-         VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+-         VK_DEPENDENCY_BY_REGION_BIT},
+-        {0, VK_SUBPASS_EXTERNAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+-         VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT,
+-         VK_DEPENDENCY_BY_REGION_BIT},
++        {VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
++         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_MEMORY_WRITE_BIT,
++         VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
++         0},
++        {0, VK_SUBPASS_EXTERNAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
++         VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
++         VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT,
++         0},
+     };
+ 
+     VkRenderPassCreateInfo renderPassInfo = {.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,

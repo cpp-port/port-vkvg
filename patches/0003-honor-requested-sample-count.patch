@@ -1,0 +1,14 @@
+diff --git a/src/vkvg_device.c b/src/vkvg_device.c
+index e5147c8..d787408 100644
+--- a/src/vkvg_device.c
++++ b/src/vkvg_device.c
+@@ -421,7 +421,8 @@ VkvgDevice vkvg_device_create(vkvg_device_create_info_t *info) {
+ 
+        VkSampleCountFlags counts = colorCounts & depthCounts;
+ 
+-       info->samples = get_max_sample_count(counts);
++       if (!(counts & info->samples))
++           info->samples = VK_SAMPLE_COUNT_1_BIT;
+       
+     }
+ 

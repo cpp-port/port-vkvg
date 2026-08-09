@@ -1,0 +1,27 @@
+diff --git a/src/vkvg_context_internal.c b/src/vkvg_context_internal.c
+index 4765b51..40c9fae 100644
+--- a/src/vkvg_context_internal.c
++++ b/src/vkvg_context_internal.c
+@@ -1815,6 +1815,13 @@ void _fill_non_zero(VkvgContext ctx) {
+         uint32_t pathPointCount = ctx->pathes[ptrPath] & PATH_ELT_MASK;
+ 
+         if (pathPointCount > 2) {
++            float signedArea = 0.0f;
++            for (uint32_t pointIndex = 0; pointIndex < pathPointCount; pointIndex++) {
++                vec2 point     = ctx->points[firstPtIdx + pointIndex];
++                vec2 nextPoint = ctx->points[firstPtIdx + (pointIndex + 1) % pathPointCount];
++                signedArea += point.x * nextPoint.y - nextPoint.x * point.y;
++            }
++
+             VKVG_IBO_INDEX_TYPE firstVertIdx = (VKVG_IBO_INDEX_TYPE)(ctx->vertCount - ctx->curVertOffset);
+             ear_clip_point* ecps = (ear_clip_point*)malloc(pathPointCount*sizeof(ear_clip_point));
+             //ear_clip_point      ecps[pathPointCount];
+@@ -1843,7 +1850,7 @@ void _fill_non_zero(VkvgContext ctx) {
+                     break;
+                 }
+                 ear_clip_point *v0 = ecp_current->next, *v1 = ecp_current, *v2 = ecp_current->next->next;
+-                if (ecp_zcross(v0, v2, v1) > 0) {
++                if (ecp_zcross(v0, v2, v1) * signedArea < 0) {
+                     ecp_current = ecp_current->next;
+                     tries++;
+                     continue;
