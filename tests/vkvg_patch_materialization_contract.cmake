@@ -128,3 +128,27 @@ foreach(pristine_source
     message(FATAL_ERROR "Visual Studio compiles pristine patched source: ${pristine_source}")
   endif()
 endforeach()
+
+file(READ "${WRAPPER_DIR}/CMakeLists.txt" wrapper_cmake)
+foreach(required_text
+  "include(\"\${CMAKE_CURRENT_SOURCE_DIR}/patches/vkvg_patch_manifest.cmake\")"
+  "add_custom_command("
+  "set_source_files_properties(\${VKVG_PATCHED_SOURCES} PROPERTIES GENERATED TRUE)"
+  "list(REMOVE_ITEM VKVG_SRC \${VKVG_PRISTINE_PATCHED_SOURCES})"
+  "list(APPEND VKVG_SRC \${VKVG_PATCHED_SOURCES})"
+  "option(VKVG_WRAPPER_BUILD_TESTS"
+  "tests/offscreen_regression.c")
+  string(FIND "${wrapper_cmake}" "${required_text}" position)
+  if(position EQUAL -1)
+    message(FATAL_ERROR "CMake wrapper is missing: ${required_text}")
+  endif()
+endforeach()
+
+foreach(target_declaration
+  "ADD_LIBRARY(\${PROJECT_NAME} SHARED \${VKVG_SRC} \${VKVG_HEADERS})"
+  "ADD_LIBRARY(static_\${PROJECT_NAME} STATIC \${VKVG_SRC} \${VKVG_HEADERS})")
+  string(FIND "${wrapper_cmake}" "${target_declaration}" position)
+  if(position EQUAL -1)
+    message(FATAL_ERROR "CMake target does not consume the shared VKVG source list: ${target_declaration}")
+  endif()
+endforeach()

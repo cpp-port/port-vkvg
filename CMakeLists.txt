@@ -57,6 +57,43 @@ FILE(GLOB VKH_SRC vkvg/vkh/src/*.c)
 
 
 FILE(GLOB VKVG_SRC vkvg/src/*.c vkvg/src/deps/*.c)
+include("${CMAKE_CURRENT_SOURCE_DIR}/patches/vkvg_patch_manifest.cmake")
+set(VKVG_PATCH_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/vkvg-patched")
+set(VKVG_PATCHED_SOURCES)
+set(VKVG_PRISTINE_PATCHED_SOURCES)
+foreach(relative IN LISTS VKVG_PATCHED_RELATIVE_SOURCES)
+   list(APPEND VKVG_PRISTINE_PATCHED_SOURCES
+      "${CMAKE_CURRENT_SOURCE_DIR}/vkvg/${relative}")
+   list(APPEND VKVG_PATCHED_SOURCES
+      "${VKVG_PATCH_OUTPUT_DIR}/${relative}")
+endforeach()
+
+set(VKVG_PATCH_DEPENDENCIES)
+foreach(patch_name IN LISTS VKVG_PATCH_FILES)
+   list(APPEND VKVG_PATCH_DEPENDENCIES
+      "${CMAKE_CURRENT_SOURCE_DIR}/patches/${patch_name}")
+endforeach()
+
+list(REMOVE_ITEM VKVG_SRC ${VKVG_PRISTINE_PATCHED_SOURCES})
+list(APPEND VKVG_SRC ${VKVG_PATCHED_SOURCES})
+
+add_custom_command(
+   OUTPUT ${VKVG_PATCHED_SOURCES} "${VKVG_PATCH_OUTPUT_DIR}/vkvg-patches.stamp"
+   COMMAND "${CMAKE_COMMAND}"
+      "-DVKVG_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/vkvg"
+      "-DVKVG_OUTPUT_DIR=${VKVG_PATCH_OUTPUT_DIR}"
+      "-DVKVG_PATCH_DIR=${CMAKE_CURRENT_SOURCE_DIR}/patches"
+      -P "${CMAKE_CURRENT_SOURCE_DIR}/patches/materialize_vkvg_sources.cmake"
+   DEPENDS
+      "${CMAKE_CURRENT_SOURCE_DIR}/patches/materialize_vkvg_sources.cmake"
+      "${CMAKE_CURRENT_SOURCE_DIR}/patches/vkvg_patch_manifest.cmake"
+      ${VKVG_PATCH_DEPENDENCIES}
+      ${VKVG_PRISTINE_PATCHED_SOURCES}
+   VERBATIM)
+set_source_files_properties(${VKVG_PATCHED_SOURCES} PROPERTIES GENERATED TRUE)
+add_custom_target(vkvg_materialize_patches
+   DEPENDS ${VKVG_PATCHED_SOURCES} "${VKVG_PATCH_OUTPUT_DIR}/vkvg-patches.stamp")
+
 FILE(GLOB VKVG_HEADERS vkvg/src/*.h)
 SET (VKVG_PUBLIC_HEADERS "include/vkvg.h;include/vkvg-svg.h")
 
@@ -71,6 +108,8 @@ LIST (APPEND VKVG_SRC ${SVG_SRC} ${VKH_SRC})
 
 ADD_LIBRARY(${PROJECT_NAME} SHARED ${VKVG_SRC} ${VKVG_HEADERS})
 ADD_LIBRARY(static_${PROJECT_NAME} STATIC ${VKVG_SRC} ${VKVG_HEADERS})
+add_dependencies(${PROJECT_NAME} vkvg_materialize_patches)
+add_dependencies(static_${PROJECT_NAME} vkvg_materialize_patches)
 
 #add_library(${PROJECT_NAME} SHARED ${library_source})
 #add_library(static_${PROJECT_NAME} STATIC ${library_source})
@@ -135,4 +174,21 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/s
 
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE _${PROJECT_NAME}_project)
+
+
+option(VKVG_WRAPPER_BUILD_TESTS "Build SceneFoundry VKVG wrapper regression tests" OFF)
+if(VKVG_WRAPPER_BUILD_TESTS)
+   enable_testing()
+   add_test(
+      NAME vkvg_patch_materialization_contract
+      COMMAND "${CMAKE_COMMAND}"
+         "-DWRAPPER_DIR=${CMAKE_CURRENT_SOURCE_DIR}"
+         "-DTEST_OUTPUT_DIR=${CMAKE_CURRENT_BINARY_DIR}/contract-vkvg-patched"
+         -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/vkvg_patch_materialization_contract.cmake")
+   add_executable(vkvg_offscreen_regression tests/offscreen_regression.c)
+   target_include_directories(vkvg_offscreen_regression PRIVATE
+      "${CMAKE_CURRENT_SOURCE_DIR}/include")
+   target_link_libraries(vkvg_offscreen_regression PRIVATE ${PROJECT_NAME})
+   add_test(NAME vkvg_offscreen_regression COMMAND vkvg_offscreen_regression)
+endif()
 
