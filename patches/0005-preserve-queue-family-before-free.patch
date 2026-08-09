@@ -1,0 +1,19 @@
+diff --git a/src/vkvg_device.c b/src/vkvg_device.c
+index d787408..5e564be 100644
+--- a/src/vkvg_device.c
++++ b/src/vkvg_device.c
+@@ -402,13 +402,13 @@ VkvgDevice vkvg_device_create(vkvg_device_create_info_t *info) {
+                                           .pEnabledFeatures        = &enabledFeatures,
+                                           .pNext                   = pNext};
+         dev->vkhDev                    = vkh_device_create(app, pi, &device_info);
++        info->qFamIdx                  = pi->gQueue;
+ 
+         vkh_app_free_phyinfos(phyCount, phys);
+ 
+         info->inst    = vkh_app_get_inst(app);
+         info->phy     = vkh_device_get_phy(dev->vkhDev);
+         info->vkdev   = vkh_device_get_vkdev(dev->vkhDev);
+-        info->qFamIdx = pi->gQueue;
+         info->qIndex  = 0;
+     }
+     else

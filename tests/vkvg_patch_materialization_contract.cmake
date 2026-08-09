@@ -16,7 +16,8 @@ set(materializer "${patch_dir}/materialize_vkvg_sources.cmake")
 set(relative_sources
   src/vkvg_context_internal.c
   src/vkvg_device.c
-  src/vkvg_device_internal.c)
+  src/vkvg_device_internal.c
+  vkh/src/vkh_image.c)
 
 find_package(Git REQUIRED)
 file(REMOVE_RECURSE "${TEST_OUTPUT_DIR}")
@@ -26,8 +27,14 @@ file(REMOVE_RECURSE "${TEST_OUTPUT_DIR}")
 foreach(relative IN LISTS relative_sources)
   get_filename_component(relative_directory "${relative}" DIRECTORY)
   file(MAKE_DIRECTORY "${pristine_source_dir}/${relative_directory}")
+  set(source_repository "${vendored_source_dir}")
+  set(source_repository_relative "${relative}")
+  if(relative MATCHES "^vkh/(.*)$")
+    set(source_repository "${vendored_source_dir}/vkh")
+    set(source_repository_relative "${CMAKE_MATCH_1}")
+  endif()
   execute_process(
-    COMMAND "${GIT_EXECUTABLE}" -C "${vendored_source_dir}" show "HEAD:${relative}"
+    COMMAND "${GIT_EXECUTABLE}" -C "${source_repository}" show "HEAD:${source_repository_relative}"
     OUTPUT_FILE "${pristine_source_dir}/${relative}"
     RESULT_VARIABLE show_result
     ERROR_VARIABLE show_error)
@@ -78,6 +85,7 @@ endif()
 file(READ "${staged_output_dir}/src/vkvg_context_internal.c" context_source)
 file(READ "${staged_output_dir}/src/vkvg_device.c" device_source)
 file(READ "${staged_output_dir}/src/vkvg_device_internal.c" device_internal_source)
+file(READ "${staged_output_dir}/vkh/src/vkh_image.c" vkh_image_source)
 string(FIND "${context_source}"
   "ctx->pushConsts.fsq_patternType &= ~FULLSCREEN_BIT;" clear_position)
 string(FIND "${context_source}"
@@ -97,21 +105,54 @@ endforeach()
 
 string(FIND "${device_source}"
   "if (!(counts & info->samples))" sample_guard)
+string(FIND "${device_source}"
+  "dev->vkhDev                    = vkh_device_create" device_create_position)
+if(device_create_position EQUAL -1)
+  message(FATAL_ERROR "Unable to locate staged standalone device creation")
+endif()
+string(SUBSTRING "${device_source}" ${device_create_position} -1 device_creation_source)
+string(FIND "${device_creation_source}"
+  "info->qFamIdx" queue_family_position)
+string(FIND "${device_creation_source}"
+  "vkh_app_free_phyinfos(phyCount, phys);" free_phyinfos_position)
 string(FIND "${device_internal_source}"
   "VK_PIPELINE_STAGE_ALL_COMMANDS_BIT" all_commands_stage)
 string(FIND "${device_internal_source}"
   "VK_ATTACHMENT_STORE_OP_STORE" multisample_store)
-if(sample_guard EQUAL -1 OR all_commands_stage EQUAL -1 OR multisample_store EQUAL -1)
+if(sample_guard EQUAL -1 OR
+   queue_family_position EQUAL -1 OR
+   free_phyinfos_position EQUAL -1 OR
+   queue_family_position GREATER free_phyinfos_position OR
+   all_commands_stage EQUAL -1 OR
+   multisample_store EQUAL -1)
   message(FATAL_ERROR "Missing staged device/render-pass fixes")
 endif()
+
+foreach(required_text
+  "vkMapMemory(img->pDev->dev, img->memory, 0, VK_WHOLE_SIZE, 0, &data)"
+  "vkUnmapMemory(img->pDev->dev, img->memory)")
+  string(FIND "${vkh_image_source}" "${required_text}" position)
+  if(position EQUAL -1)
+    message(FATAL_ERROR "Missing staged non-VMA image readback fix: ${required_text}")
+  endif()
+endforeach()
 
 file(READ "${WRAPPER_DIR}/vkvg.vcxproj" vcxproj)
 foreach(required_text
   "Name=\"MaterializeVkvgPatchedSources\""
   "BeforeTargets=\"ClCompile\""
+  "<VkvgPatchOutputDir>$(IntDir)vkvg-patched</VkvgPatchOutputDir>"
   "$(IntDir)vkvg-patched\\src\\vkvg_context_internal.c"
   "$(IntDir)vkvg-patched\\src\\vkvg_device.c"
   "$(IntDir)vkvg-patched\\src\\vkvg_device_internal.c"
+  "$(IntDir)vkvg-patched\\vkh\\src\\vkh_image.c"
+  "<ObjectFileName>$(IntDir)vkvg_context_internal.obj</ObjectFileName>"
+  "<ObjectFileName>$(IntDir)vkvg_device.obj</ObjectFileName>"
+  "<ObjectFileName>$(IntDir)vkvg_device_internal.obj</ObjectFileName>"
+  "<ObjectFileName>$(IntDir)vkh_image.obj</ObjectFileName>"
+  "0005-preserve-queue-family-before-free.patch"
+  "0006-implement-non-vma-image-mapping.patch"
+  "<AdditionalIncludeDirectories>$(ProjectDir)vkvg\\vkh\\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>"
   "materialize_vkvg_sources.cmake")
   string(FIND "${vcxproj}" "${required_text}" position)
   if(position EQUAL -1)
@@ -119,10 +160,29 @@ foreach(required_text
   endif()
 endforeach()
 
+set(generated_source_include
+  "<AdditionalIncludeDirectories>$(ProjectDir)vkvg\\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>")
+set(generated_source_include_count 0)
+set(remaining_vcxproj "${vcxproj}")
+while(TRUE)
+  string(FIND "${remaining_vcxproj}" "${generated_source_include}" position)
+  if(position EQUAL -1)
+    break()
+  endif()
+  math(EXPR next_position "${position} + 1")
+  string(SUBSTRING "${remaining_vcxproj}" ${next_position} -1 remaining_vcxproj)
+  math(EXPR generated_source_include_count "${generated_source_include_count} + 1")
+endwhile()
+if(NOT generated_source_include_count EQUAL 3)
+  message(FATAL_ERROR
+    "Each generated Visual Studio source needs the pristine vkvg/src include path")
+endif()
+
 foreach(pristine_source
   "vkvg\\src\\vkvg_context_internal.c"
   "vkvg\\src\\vkvg_device.c"
-  "vkvg\\src\\vkvg_device_internal.c")
+  "vkvg\\src\\vkvg_device_internal.c"
+  "vkvg\\vkh\\src\\vkh_image.c")
   string(FIND "${vcxproj}" "ClCompile Include=\"${pristine_source}\"" position)
   if(NOT position EQUAL -1)
     message(FATAL_ERROR "Visual Studio compiles pristine patched source: ${pristine_source}")
@@ -150,5 +210,33 @@ foreach(target_declaration
   string(FIND "${wrapper_cmake}" "${target_declaration}" position)
   if(position EQUAL -1)
     message(FATAL_ERROR "CMake target does not consume the shared VKVG source list: ${target_declaration}")
+  endif()
+endforeach()
+
+string(FIND "${wrapper_cmake}"
+  "LIST (APPEND VKVG_SRC \${SVG_SRC} \${VKH_SRC})" append_vkh_position)
+string(FIND "${wrapper_cmake}"
+  "list(REMOVE_ITEM VKVG_SRC \${VKVG_PRISTINE_PATCHED_SOURCES})" remove_pristine_position)
+if(append_vkh_position EQUAL -1 OR
+   remove_pristine_position EQUAL -1 OR
+   remove_pristine_position LESS append_vkh_position)
+  message(FATAL_ERROR "CMake must remove pristine patched sources after appending VKH sources")
+endif()
+
+foreach(vulkan_link
+  "target_link_libraries(\${PROJECT_NAME} PUBLIC Vulkan::Vulkan)"
+  "target_link_libraries(static_\${PROJECT_NAME} PUBLIC Vulkan::Vulkan)")
+  string(FIND "${wrapper_cmake}" "${vulkan_link}" position)
+  if(position EQUAL -1)
+    message(FATAL_ERROR "CMake target is missing Vulkan usage requirements: ${vulkan_link}")
+  endif()
+endforeach()
+
+foreach(scalar_layout_definition
+  "target_compile_definitions(\${PROJECT_NAME} PRIVATE VKVG_ENABLE_VK_SCALAR_BLOCK_LAYOUT)"
+  "target_compile_definitions(static_\${PROJECT_NAME} PRIVATE VKVG_ENABLE_VK_SCALAR_BLOCK_LAYOUT)")
+  string(FIND "${wrapper_cmake}" "${scalar_layout_definition}" position)
+  if(position EQUAL -1)
+    message(FATAL_ERROR "CMake target is missing VKVG scalar layout support: ${scalar_layout_definition}")
   endif()
 endforeach()

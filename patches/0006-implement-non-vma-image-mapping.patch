@@ -1,0 +1,20 @@
+diff --git a/vkh/src/vkh_image.c b/vkh/src/vkh_image.c
+index 097514a..4659fe9 100644
+--- a/vkh/src/vkh_image.c
++++ b/vkh/src/vkh_image.c
+@@ -270,12 +270,14 @@ void *vkh_image_map(VkhImage img) {
+ #ifdef VKH_USE_VMA
+     vmaMapMemory(img->pDev->allocator, img->alloc, &data);
+ #else
++    VK_CHECK_RESULT(vkMapMemory(img->pDev->dev, img->memory, 0, VK_WHOLE_SIZE, 0, &data));
+ #endif
+     return data;
+ }
+ void vkh_image_unmap(VkhImage img) {
+ #ifdef VKH_USE_VMA
+     vmaUnmapMemory(img->pDev->allocator, img->alloc);
+ #else
++    vkUnmapMemory(img->pDev->dev, img->memory);
+ #endif
+ }
+ void vkh_image_set_name(VkhImage img, const char *name) {

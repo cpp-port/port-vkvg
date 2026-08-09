@@ -69,7 +69,7 @@
     <ClCompile Include="vkvg\vkh\src\vkh_device.c">
       <Filter>Source Files\vkh\src</Filter>
     </ClCompile>
-    <ClCompile Include="vkvg\vkh\src\vkh_image.c">
+    <ClCompile Include="$(IntDir)vkvg-patched\vkh\src\vkh_image.c">
       <Filter>Source Files\vkh\src</Filter>
     </ClCompile>
     <ClCompile Include="vkvg\vkh\src\vkh_phyinfo.c">

@@ -75,8 +75,8 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <VkvgPatchOutputDir>$(IntDir)vkvg-patched\</VkvgPatchOutputDir>
-    <VkvgPatchStamp>$(VkvgPatchOutputDir)vkvg-patches.stamp</VkvgPatchStamp>
+    <VkvgPatchOutputDir>$(IntDir)vkvg-patched</VkvgPatchOutputDir>
+    <VkvgPatchStamp>$(VkvgPatchOutputDir)\vkvg-patches.stamp</VkvgPatchStamp>
     <VkvgPatchCMakeExe Condition="'$(VkvgPatchCMakeExe)'==''">cmake</VkvgPatchCMakeExe>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -161,14 +161,17 @@
     <VkvgPatchInput Include="$(ProjectDir)patches\0002-fix-non-zero-fill-winding.patch" />
     <VkvgPatchInput Include="$(ProjectDir)patches\0003-honor-requested-sample-count.patch" />
     <VkvgPatchInput Include="$(ProjectDir)patches\0004-strengthen-render-pass-handoffs.patch" />
+    <VkvgPatchInput Include="$(ProjectDir)patches\0005-preserve-queue-family-before-free.patch" />
+    <VkvgPatchInput Include="$(ProjectDir)patches\0006-implement-non-vma-image-mapping.patch" />
     <VkvgPatchInput Include="$(ProjectDir)vkvg\src\vkvg_context_internal.c" />
     <VkvgPatchInput Include="$(ProjectDir)vkvg\src\vkvg_device.c" />
     <VkvgPatchInput Include="$(ProjectDir)vkvg\src\vkvg_device_internal.c" />
+    <VkvgPatchInput Include="$(ProjectDir)vkvg\vkh\src\vkh_image.c" />
   </ItemGroup>
   <Target Name="MaterializeVkvgPatchedSources"
           BeforeTargets="ClCompile"
           Inputs="@(VkvgPatchInput)"
-          Outputs="$(VkvgPatchStamp);$(IntDir)vkvg-patched\src\vkvg_context_internal.c;$(IntDir)vkvg-patched\src\vkvg_device.c;$(IntDir)vkvg-patched\src\vkvg_device_internal.c">
+          Outputs="$(VkvgPatchStamp);$(IntDir)vkvg-patched\src\vkvg_context_internal.c;$(IntDir)vkvg-patched\src\vkvg_device.c;$(IntDir)vkvg-patched\src\vkvg_device_internal.c;$(IntDir)vkvg-patched\vkh\src\vkh_image.c">
     <Exec WorkingDirectory="$(ProjectDir)"
           Command="&quot;$(VkvgPatchCMakeExe)&quot; -DVKVG_SOURCE_DIR=&quot;$(ProjectDir)vkvg&quot; -DVKVG_OUTPUT_DIR=&quot;$(VkvgPatchOutputDir)&quot; -DVKVG_PATCH_DIR=&quot;$(ProjectDir)patches&quot; -P &quot;$(ProjectDir)patches\materialize_vkvg_sources.cmake&quot;" />
   </Target>
@@ -177,12 +180,18 @@
     <ClCompile Include="vkvg\src\vkvg_context.c" />
     <ClCompile Include="$(IntDir)vkvg-patched\src\vkvg_context_internal.c">
       <Link>vkvg\src\vkvg_context_internal.c</Link>
+      <ObjectFileName>$(IntDir)vkvg_context_internal.obj</ObjectFileName>
+      <AdditionalIncludeDirectories>$(ProjectDir)vkvg\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <ClCompile Include="$(IntDir)vkvg-patched\src\vkvg_device.c">
       <Link>vkvg\src\vkvg_device.c</Link>
+      <ObjectFileName>$(IntDir)vkvg_device.obj</ObjectFileName>
+      <AdditionalIncludeDirectories>$(ProjectDir)vkvg\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <ClCompile Include="$(IntDir)vkvg-patched\src\vkvg_device_internal.c">
       <Link>vkvg\src\vkvg_device_internal.c</Link>
+      <ObjectFileName>$(IntDir)vkvg_device_internal.obj</ObjectFileName>
+      <AdditionalIncludeDirectories>$(ProjectDir)vkvg\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <ClCompile Include="vkvg\src\vkvg_experimental.c" />
     <ClCompile Include="vkvg\src\vkvg_fonts.c" />
@@ -194,7 +203,11 @@
     <ClCompile Include="vkvg\vkh\src\vkh_app.c" />
     <ClCompile Include="vkvg\vkh\src\vkh_buffer.c" />
     <ClCompile Include="vkvg\vkh\src\vkh_device.c" />
-    <ClCompile Include="vkvg\vkh\src\vkh_image.c" />
+    <ClCompile Include="$(IntDir)vkvg-patched\vkh\src\vkh_image.c">
+      <Link>vkvg\vkh\src\vkh_image.c</Link>
+      <ObjectFileName>$(IntDir)vkh_image.obj</ObjectFileName>
+      <AdditionalIncludeDirectories>$(ProjectDir)vkvg\vkh\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
     <ClCompile Include="vkvg\vkh\src\vkh_phyinfo.c" />
     <ClCompile Include="vkvg\vkh\src\vkh_presenter.c" />
     <ClCompile Include="vkvg\vkh\src\vkh_queue.c" />

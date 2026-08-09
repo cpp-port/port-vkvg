@@ -18,17 +18,24 @@ static int report_pixel_failure(const char *name, const unsigned char *pixel) {
 int main(int argc, char *argv[]) {
     vkvg_device_create_info_t info = {VK_SAMPLE_COUNT_1_BIT, false};
     VkvgDevice                dev  = vkvg_device_create(&info);
-    if (!dev)
+    vkvg_status_t             status = vkvg_device_status(dev);
+    if (status != VKVG_STATUS_SUCCESS) {
+        fprintf(stderr, "device creation failed: %s\n", vkvg_status_to_string(status));
         return EXIT_FAILURE;
+    }
 
     VkvgSurface surf = vkvg_surface_create(dev, TEST_WIDTH, TEST_HEIGHT);
-    if (!surf) {
+    status = vkvg_surface_status(surf);
+    if (status != VKVG_STATUS_SUCCESS) {
+        fprintf(stderr, "surface creation failed: %s\n", vkvg_status_to_string(status));
         vkvg_device_destroy(dev);
         return EXIT_FAILURE;
     }
 
     VkvgContext ctx = vkvg_create(surf);
-    if (!ctx) {
+    status = vkvg_status(ctx);
+    if (status != VKVG_STATUS_SUCCESS) {
+        fprintf(stderr, "context creation failed: %s\n", vkvg_status_to_string(status));
         vkvg_surface_destroy(surf);
         vkvg_device_destroy(dev);
         return EXIT_FAILURE;
@@ -41,7 +48,9 @@ int main(int argc, char *argv[]) {
     vkvg_fill(ctx);
 
     VkvgPattern gradient = vkvg_pattern_create_linear(0, 8, 0, 56);
-    if (!gradient) {
+    status = vkvg_pattern_status(gradient);
+    if (status != VKVG_STATUS_SUCCESS) {
+        fprintf(stderr, "gradient creation failed: %s\n", vkvg_status_to_string(status));
         vkvg_destroy(ctx);
         vkvg_surface_destroy(surf);
         vkvg_device_destroy(dev);

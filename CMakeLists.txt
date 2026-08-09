@@ -74,9 +74,6 @@ foreach(patch_name IN LISTS VKVG_PATCH_FILES)
       "${CMAKE_CURRENT_SOURCE_DIR}/patches/${patch_name}")
 endforeach()
 
-list(REMOVE_ITEM VKVG_SRC ${VKVG_PRISTINE_PATCHED_SOURCES})
-list(APPEND VKVG_SRC ${VKVG_PATCHED_SOURCES})
-
 add_custom_command(
    OUTPUT ${VKVG_PATCHED_SOURCES} "${VKVG_PATCH_OUTPUT_DIR}/vkvg-patches.stamp"
    COMMAND "${CMAKE_COMMAND}"
@@ -105,11 +102,15 @@ ELSE()
 ENDIF()
 
 LIST (APPEND VKVG_SRC ${SVG_SRC} ${VKH_SRC})
+list(REMOVE_ITEM VKVG_SRC ${VKVG_PRISTINE_PATCHED_SOURCES})
+list(APPEND VKVG_SRC ${VKVG_PATCHED_SOURCES})
 
 ADD_LIBRARY(${PROJECT_NAME} SHARED ${VKVG_SRC} ${VKVG_HEADERS})
 ADD_LIBRARY(static_${PROJECT_NAME} STATIC ${VKVG_SRC} ${VKVG_HEADERS})
 add_dependencies(${PROJECT_NAME} vkvg_materialize_patches)
 add_dependencies(static_${PROJECT_NAME} vkvg_materialize_patches)
+target_link_libraries(${PROJECT_NAME} PUBLIC Vulkan::Vulkan)
+target_link_libraries(static_${PROJECT_NAME} PUBLIC Vulkan::Vulkan)
 
 #add_library(${PROJECT_NAME} SHARED ${library_source})
 #add_library(static_${PROJECT_NAME} STATIC ${library_source})
@@ -123,6 +124,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE HAVE_CONFIG_H)
 target_compile_definitions(static_${PROJECT_NAME} PRIVATE HAVE_CONFIG_H)
+target_compile_definitions(${PROJECT_NAME} PRIVATE VKVG_ENABLE_VK_SCALAR_BLOCK_LAYOUT)
+target_compile_definitions(static_${PROJECT_NAME} PRIVATE VKVG_ENABLE_VK_SCALAR_BLOCK_LAYOUT)
 
 
 if (MSVC)
@@ -191,4 +194,3 @@ if(VKVG_WRAPPER_BUILD_TESTS)
    target_link_libraries(vkvg_offscreen_regression PRIVATE ${PROJECT_NAME})
    add_test(NAME vkvg_offscreen_regression COMMAND vkvg_offscreen_regression)
 endif()
-
