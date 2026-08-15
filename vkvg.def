@@ -1,6 +1,9 @@
 LIBRARY "vkvg"
 
 EXPORTS
-
+vkh_image_import
+vkh_image_status
+vkh_image_create_view
+vkh_image_destroy
 
 
