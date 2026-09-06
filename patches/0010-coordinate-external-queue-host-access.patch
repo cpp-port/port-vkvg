@@ -1,0 +1,121 @@
+diff --git a/src/vkvg_device.c b/src/vkvg_device.c
+--- a/src/vkvg_device.c
++++ b/src/vkvg_device.c
+@@ -430,6 +430,16 @@ VkvgDevice vkvg_device_create(vkvg_device_create_info_t *info) {
+     return dev;
+ }
+ 
++vkvg_public void vkvg_device_set_queue_host_synchronization(
++    VkvgDevice dev, void *userData, vkh_queue_host_sync_callback_t lockCallback,
++    vkh_queue_host_sync_callback_t unlockCallback) {
++    if (!dev || !dev->gQueue)
++        return;
++
++    vkh_queue_set_host_synchronization(
++        dev->gQueue, userData, lockCallback, unlockCallback);
++}
++
+ void vkvg_device_destroy(VkvgDevice dev) {
+     if (vkvg_device_status(dev)) {
+         LOG(VKVG_LOG_ERR, "DESTROY Device failed, see Status for info");
+diff --git a/vkh/src/vkh_queue.c b/vkh/src/vkh_queue.c
+--- a/vkh/src/vkh_queue.c
++++ b/vkh/src/vkh_queue.c
+@@ -44,1 +44,9 @@
++void vkh_queue_set_host_synchronization(
++    VkhQueue queue, void *userData, vkh_queue_host_sync_callback_t lockCallback,
++    vkh_queue_host_sync_callback_t unlockCallback) {
++    queue->hostSyncUserData = userData;
++    queue->hostSyncLock     = lockCallback;
++    queue->hostSyncUnlock   = unlockCallback;
++}
++
+ void vkh_queue_destroy(VkhQueue queue) { free(queue); }
+diff --git a/vkh/src/vkh_queue.h b/vkh/src/vkh_queue.h
+--- a/vkh/src/vkh_queue.h
++++ b/vkh/src/vkh_queue.h
+@@ -28,13 +28,22 @@ extern "C" {
+ 
+ #include "vkh.h"
+ 
++typedef void (*vkh_queue_host_sync_callback_t)(void *userData);
++
+ typedef struct _vkh_queue_t {
+-    VkhDevice    dev;
+-    uint32_t     familyIndex;
+-    VkQueue      queue;
+-    VkQueueFlags flags;
++    VkhDevice                          dev;
++    uint32_t                           familyIndex;
++    VkQueue                            queue;
++    VkQueueFlags                       flags;
++    void                              *hostSyncUserData;
++    vkh_queue_host_sync_callback_t     hostSyncLock;
++    vkh_queue_host_sync_callback_t     hostSyncUnlock;
+ } vkh_queue_t;
+ 
++void vkh_queue_set_host_synchronization(
++    VkhQueue queue, void *userData, vkh_queue_host_sync_callback_t lockCallback,
++    vkh_queue_host_sync_callback_t unlockCallback);
++
+ #ifdef __cplusplus
+ }
+ #endif
+diff --git a/vkh/src/vkhelpers.c b/vkh/src/vkhelpers.c
+--- a/vkh/src/vkhelpers.c
++++ b/vkh/src/vkhelpers.c
+@@ -24,6 +24,18 @@
+ 
+ #define CHECK_BIT(var, pos) (((var) >> (pos)) & 1)
+ 
++static VkResult _vkh_queue_submit(VkhQueue queue, uint32_t submitCount,
++                                  const VkSubmitInfo *submitInfo, VkFence fence) {
++    if (queue->hostSyncLock)
++        queue->hostSyncLock(queue->hostSyncUserData);
++
++    VkResult result = vkQueueSubmit(queue->queue, submitCount, submitInfo, fence);
++
++    if (queue->hostSyncUnlock)
++        queue->hostSyncUnlock(queue->hostSyncUserData);
++    return result;
++}
++
+ VkFence vkh_fence_create(VkhDevice dev) {
+     VkFence           fence;
+     VkFenceCreateInfo fenceInfo = {.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, .pNext = NULL, .flags = 0};
+@@ -88,7 +100,7 @@ void vkh_cmd_submit_timelined(VkhQueue queue, VkCommandBuffer *pCmdBuff, VkSemap
+     submitInfo.pWaitDstStageMask = &stageFlags, submitInfo.commandBufferCount = 1;
+     submitInfo.pCommandBuffers = pCmdBuff;
+ 
+-    VK_CHECK_RESULT(vkQueueSubmit(queue->queue, 1, &submitInfo, VK_NULL_HANDLE));
++    VK_CHECK_RESULT(_vkh_queue_submit(queue, 1, &submitInfo, VK_NULL_HANDLE));
+ }
+ void vkh_cmd_submit_timelined2(VkhQueue queue, VkCommandBuffer *pCmdBuff, VkSemaphore timelines[2],
+                                const uint64_t waits[2], const uint64_t signals[2]) {
+@@ -112,7 +124,7 @@ void vkh_cmd_submit_timelined2(VkhQueue queue, VkCommandBuffer *pCmdBuff, VkSemap
+     submitInfo.pWaitDstStageMask = stageFlags, submitInfo.commandBufferCount = 1;
+     submitInfo.pCommandBuffers = pCmdBuff;
+ 
+-    VK_CHECK_RESULT(vkQueueSubmit(queue->queue, 1, &submitInfo, VK_NULL_HANDLE));
++    VK_CHECK_RESULT(_vkh_queue_submit(queue, 1, &submitInfo, VK_NULL_HANDLE));
+ }
+ #endif
+ 
+@@ -163,7 +175,7 @@ void vkh_cmd_submit(VkhQueue queue, VkCommandBuffer *pCmdBuff, VkFence fence) {
+                                         .pWaitDstStageMask  = &stageFlags,
+                                         .commandBufferCount = 1,
+                                         .pCommandBuffers    = pCmdBuff};
+-    VK_CHECK_RESULT(vkQueueSubmit(queue->queue, 1, &submit_info, fence));
++    VK_CHECK_RESULT(_vkh_queue_submit(queue, 1, &submit_info, fence));
+ }
+ void vkh_cmd_submit_with_semaphores(VkhQueue queue, VkCommandBuffer *pCmdBuff, VkSemaphore waitSemaphore,
+                                     VkSemaphore signalSemaphore, VkFence fence) {
+@@ -183,7 +195,7 @@ void vkh_cmd_submit_with_semaphores(VkhQueue queue, VkCommandBuffer *pCmdBuff, Vk
+         submit_info.pSignalSemaphores    = &signalSemaphore;
+     }
+ 
+-    VK_CHECK_RESULT(vkQueueSubmit(queue->queue, 1, &submit_info, fence));
++    VK_CHECK_RESULT(_vkh_queue_submit(queue, 1, &submit_info, fence));
+ }
+ 
+ void set_image_layout(VkCommandBuffer cmdBuff, VkImage image, VkImageAspectFlags aspectMask,

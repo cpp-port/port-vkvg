@@ -1,8 +1,13 @@
 set(VKVG_PATCHED_RELATIVE_SOURCES
+  src/vkvg_context.c
   src/vkvg_context_internal.c
+  src/vkvg_fonts.c
   src/vkvg_device.c
   src/vkvg_device_internal.c
-  vkh/src/vkh_image.c)
+  vkh/src/vkh_image.c
+  vkh/src/vkh_queue.c
+  vkh/src/vkh_queue.h
+  vkh/src/vkhelpers.c)
 
 set(VKVG_PATCH_FILES
   0001-clear-fullscreen-bit-before-indexed-draw.patch
@@ -10,4 +15,13 @@ set(VKVG_PATCH_FILES
   0003-honor-requested-sample-count.patch
   0004-strengthen-render-pass-handoffs.patch
   0005-preserve-queue-family-before-free.patch
-  0006-implement-non-vma-image-mapping.patch)
+  0006-implement-non-vma-image-mapping.patch
+  0007-refresh-selected-font-cache-pointers.patch
+  0008-flush-measured-glyphs-before-cache-reuse.patch
+  0009-transfer-restored-pattern-reference.patch
+  0010-coordinate-external-queue-host-access.patch
+  0011-coordinate-queue-idle-host-access.patch
+  0012-destroy-font-cache-mutex-once.patch
+  0013-support-symbol-font-charmaps.patch
+  0014-keep-bezier-subdivision-in-user-space.patch
+  0015-approximate-ellipses-with-eight-cubics.patch)

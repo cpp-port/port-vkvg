@@ -1,0 +1,41 @@
+diff --git a/src/vkvg_fonts.c b/src/vkvg_fonts.c
+--- a/src/vkvg_fonts.c
++++ b/src/vkvg_fonts.c
+@@ -436,7 +436,23 @@ _vkvg_font_t *_find_or_create_font_size(VkvgContext ctx) {
+     _font_cache_t *cache = (_font_cache_t *)ctx->dev->fontCache;
+     FT_CHECK_RESULT(FT_New_Memory_Face(cache->library, font->fontBuffer, font->fontBufSize, 0, &newSize.face));
+     FT_CHECK_RESULT(FT_Set_Char_Size(newSize.face, 0, newSize.charSize, dev->hdpi, dev->vdpi));
+-    FT_CHECK_RESULT(FT_Select_Charmap(newSize.face, FT_ENCODING_UNICODE));
++    // Valid Windows symbol fonts need not provide a Unicode charmap.
++    FT_Error charmapError = FT_Select_Charmap(newSize.face, FT_ENCODING_UNICODE);
++    if (charmapError)
++        charmapError = FT_Select_Charmap(newSize.face, FT_ENCODING_MS_SYMBOL);
++    if (charmapError) {
++        // Do not publish a partially initialized size or assert on font data.
++        LOG(VKVG_LOG_ERR, "No supported charmap for font: %s (FreeType error %d)\n",
++            ctx->selectedFontName, charmapError);
++        FT_Done_Face(newSize.face);
++        --font->sizeCount;
++        if (font->sizeCount == 0) {
++            free(font->sizes);
++            font->sizes = NULL;
++        }
++        ctx->status = VKVG_STATUS_INVALID_FONT;
++        return NULL;
++    }
+     newSize.charLookup = (_char_ref **)calloc(newSize.face->num_glyphs, sizeof(_char_ref *));
+ 
+     if (FT_IS_SCALABLE(newSize.face))
+@@ -655,6 +671,12 @@ void _font_cache_create_text_run(VkvgContext ctx, const char *text, int length, VkvgText textRun) {
+     for (unsigned int i = 0; i < textRun->glyph_count; i++) {
+ #ifdef VKVG_USE_FREETYPE
+         uint32_t   gindex = FT_Get_Char_Index(textRun->font->face, tmp[i]);
++        // Microsoft symbol charmaps commonly store byte codes at U+F000.
++        // Preserve native mappings and already-qualified PUA input.
++        if (gindex == 0 && (uint32_t)tmp[i] <= 0xff &&
++            textRun->font->face->charmap->encoding == FT_ENCODING_MS_SYMBOL)
++            gindex = FT_Get_Char_Index(textRun->font->face, (FT_ULong)tmp[i] + 0xf000);
++
+ #else
+         uint32_t gindex = stbtt_FindGlyphIndex(&textRun->fontId->stbInfo, tmp[i]);
+ #endif

@@ -1,0 +1,21 @@
+diff --git a/src/vkvg_context_internal.c b/src/vkvg_context_internal.c
+index eeaeb98..8ba0df0 100644
+--- a/src/vkvg_context_internal.c
++++ b/src/vkvg_context_internal.c
+@@ -1957,9 +1957,12 @@ void _draw_full_screen_quad(VkvgContext ctx, bool scissor) {
+ }
+ 
+ void _select_font_face(VkvgContext ctx, const char *name) {
+-    if (strcmp(ctx->selectedFontName, name) == 0)
+-        return;
+-    strcpy(ctx->selectedFontName, name);
+-    ctx->currentFont     = NULL;
++    if (strcmp(ctx->selectedFontName, name) != 0)
++        strcpy(ctx->selectedFontName, name);
++
++    // Font identities and their size arrays are reallocatable device caches.
++    // Never retain their raw addresses across a new selection operation,
++    // even when the requested name did not change.
++    ctx->currentFont = NULL;
+     ctx->currentFontSize = NULL;
+ }

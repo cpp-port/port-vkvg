@@ -1,0 +1,13 @@
+diff --git a/src/vkvg_device.c b/src/vkvg_device.c
+--- a/src/vkvg_device.c
++++ b/src/vkvg_device.c
+@@ -502,7 +502,8 @@ void vkvg_device_destroy(VkvgDevice dev) {
+     if (dev->threadAware) {
+         mtx_destroy(&dev->mutex);
+-        mtx_destroy(&dev->fontCache->mutex);
++        /* _font_cache_destroy already destroyed its mutex and freed the
++         * cache. Do not access dev->fontCache after that call. */
+     }
+ 
+     if (dev->vkhDev) {
+         VkhApp app = vkh_device_get_app(dev->vkhDev);

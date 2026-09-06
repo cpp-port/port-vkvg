@@ -1,0 +1,65 @@
+diff --git a/vkh/src/vkh_queue.h b/vkh/src/vkh_queue.h
+--- a/vkh/src/vkh_queue.h
++++ b/vkh/src/vkh_queue.h
+@@ -47,5 +47,6 @@
+     vkh_queue_host_sync_callback_t unlockCallback);
++VkResult vkh_queue_wait_idle(VkhQueue queue);
+ 
+ #ifdef __cplusplus
+ }
+ #endif
+diff --git a/vkh/src/vkh_queue.c b/vkh/src/vkh_queue.c
+--- a/vkh/src/vkh_queue.c
++++ b/vkh/src/vkh_queue.c
+@@ -44,9 +44,21 @@
+ void vkh_queue_set_host_synchronization(
+     VkhQueue queue, void *userData, vkh_queue_host_sync_callback_t lockCallback,
+     vkh_queue_host_sync_callback_t unlockCallback) {
++    assert((lockCallback == NULL) == (unlockCallback == NULL));
++    if ((lockCallback == NULL) != (unlockCallback == NULL))
++        return;
+     queue->hostSyncUserData = userData;
+     queue->hostSyncLock     = lockCallback;
+     queue->hostSyncUnlock   = unlockCallback;
+ }
+ 
++VkResult vkh_queue_wait_idle(VkhQueue queue) {
++    if (queue->hostSyncLock)
++        queue->hostSyncLock(queue->hostSyncUserData);
++    VkResult result = vkQueueWaitIdle(queue->queue);
++    if (queue->hostSyncUnlock)
++        queue->hostSyncUnlock(queue->hostSyncUserData);
++    return result;
++}
++
+ void vkh_queue_destroy(VkhQueue queue) { free(queue); }
+diff --git a/src/vkvg_device_internal.c b/src/vkvg_device_internal.c
+--- a/src/vkvg_device_internal.c
++++ b/src/vkvg_device_internal.c
+@@ -30,3 +30,4 @@
+ #include "vkvg_device_internal.h"
+ #include "vkvg_context_internal.h"
++#include "vkh_queue.h"
+ #include "shaders.h"
+diff --git a/src/vkvg_device_internal.c b/src/vkvg_device_internal.c
+--- a/src/vkvg_device_internal.c
++++ b/src/vkvg_device_internal.c
+@@ -431,5 +431,7 @@
+ }
+ 
+-void _device_wait_idle(VkvgDevice dev) { vkDeviceWaitIdle(dev->vkDev); }
++/* VKVG uses only gQueue. Waiting this queue also avoids requiring ownership
++ * of every other queue on a Vulkan device supplied by the application. */
++void _device_wait_idle(VkvgDevice dev) { VK_CHECK_RESULT(vkh_queue_wait_idle(dev->gQueue)); }
+ void _device_wait_and_reset_device_fence(VkvgDevice dev) {
+     vkWaitForFences(dev->vkDev, 1, &dev->fence, VK_TRUE, UINT64_MAX);
+diff --git a/src/vkvg_device.c b/src/vkvg_device.c
+--- a/src/vkvg_device.c
++++ b/src/vkvg_device.c
+@@ -470,5 +470,5 @@
+     }
+ 
+-    vkDeviceWaitIdle(dev->vkDev);
++    _device_wait_idle(dev);
+ 
+     vkh_image_destroy(dev->emptyImg);

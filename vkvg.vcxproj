@@ -163,21 +163,42 @@
     <VkvgPatchInput Include="$(ProjectDir)patches\0004-strengthen-render-pass-handoffs.patch" />
     <VkvgPatchInput Include="$(ProjectDir)patches\0005-preserve-queue-family-before-free.patch" />
     <VkvgPatchInput Include="$(ProjectDir)patches\0006-implement-non-vma-image-mapping.patch" />
+    <VkvgPatchInput Include="$(ProjectDir)patches\0007-refresh-selected-font-cache-pointers.patch" />
+    <VkvgPatchInput Include="$(ProjectDir)patches\0008-flush-measured-glyphs-before-cache-reuse.patch" />
+    <VkvgPatchInput Include="$(ProjectDir)patches\0009-transfer-restored-pattern-reference.patch" />
+    <VkvgPatchInput Include="$(ProjectDir)patches\0010-coordinate-external-queue-host-access.patch" />
+    <VkvgPatchInput Include="$(ProjectDir)patches\0011-coordinate-queue-idle-host-access.patch" />
+    <VkvgPatchInput Include="$(ProjectDir)patches\0012-destroy-font-cache-mutex-once.patch" />
+    <VkvgPatchInput Include="$(ProjectDir)patches\0013-support-symbol-font-charmaps.patch" />
+    <VkvgPatchInput Include="$(ProjectDir)patches\0014-keep-bezier-subdivision-in-user-space.patch" />
+    <VkvgPatchInput Include="$(ProjectDir)patches\0015-approximate-ellipses-with-eight-cubics.patch" />
+    <VkvgPatchInput Include="$(ProjectDir)vkvg\src\vkvg_context.c" />
     <VkvgPatchInput Include="$(ProjectDir)vkvg\src\vkvg_context_internal.c" />
+    <VkvgPatchInput Include="$(ProjectDir)vkvg\src\vkvg_fonts.c" />
     <VkvgPatchInput Include="$(ProjectDir)vkvg\src\vkvg_device.c" />
     <VkvgPatchInput Include="$(ProjectDir)vkvg\src\vkvg_device_internal.c" />
     <VkvgPatchInput Include="$(ProjectDir)vkvg\vkh\src\vkh_image.c" />
+    <VkvgPatchInput Include="$(ProjectDir)vkvg\vkh\src\vkh_queue.c" />
+    <VkvgPatchInput Include="$(ProjectDir)vkvg\vkh\src\vkh_queue.h" />
+    <VkvgPatchInput Include="$(ProjectDir)vkvg\vkh\src\vkhelpers.c" />
   </ItemGroup>
   <Target Name="MaterializeVkvgPatchedSources"
           BeforeTargets="ClCompile"
           Inputs="@(VkvgPatchInput)"
-          Outputs="$(VkvgPatchStamp);$(IntDir)vkvg-patched\src\vkvg_context_internal.c;$(IntDir)vkvg-patched\src\vkvg_device.c;$(IntDir)vkvg-patched\src\vkvg_device_internal.c;$(IntDir)vkvg-patched\vkh\src\vkh_image.c">
+          Outputs="$(VkvgPatchStamp);$(IntDir)vkvg-patched\src\vkvg_context.c;$(IntDir)vkvg-patched\src\vkvg_context_internal.c;$(IntDir)vkvg-patched\src\vkvg_fonts.c;$(IntDir)vkvg-patched\src\vkvg_device.c;$(IntDir)vkvg-patched\src\vkvg_device_internal.c;$(IntDir)vkvg-patched\vkh\src\vkh_image.c;$(IntDir)vkvg-patched\vkh\src\vkh_queue.c;$(IntDir)vkvg-patched\vkh\src\vkh_queue.h;$(IntDir)vkvg-patched\vkh\src\vkhelpers.c">
     <Exec WorkingDirectory="$(ProjectDir)"
           Command="&quot;$(VkvgPatchCMakeExe)&quot; -DVKVG_SOURCE_DIR=&quot;$(ProjectDir)vkvg&quot; -DVKVG_OUTPUT_DIR=&quot;$(VkvgPatchOutputDir)&quot; -DVKVG_PATCH_DIR=&quot;$(ProjectDir)patches&quot; -P &quot;$(ProjectDir)patches\materialize_vkvg_sources.cmake&quot;" />
   </Target>
   <ItemGroup>
     <ClCompile Include="vkvg\src\cross_os.c" />
-    <ClCompile Include="vkvg\src\vkvg_context.c" />
+    <ClCompile Include="vkvg\src\deps\tinycthread.c">
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="$(IntDir)vkvg-patched\src\vkvg_context.c">
+      <Link>vkvg\src\vkvg_context.c</Link>
+      <ObjectFileName>$(IntDir)vkvg_context.obj</ObjectFileName>
+      <AdditionalIncludeDirectories>$(ProjectDir)vkvg\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
     <ClCompile Include="$(IntDir)vkvg-patched\src\vkvg_context_internal.c">
       <Link>vkvg\src\vkvg_context_internal.c</Link>
       <ObjectFileName>$(IntDir)vkvg_context_internal.obj</ObjectFileName>
@@ -186,20 +207,31 @@
     <ClCompile Include="$(IntDir)vkvg-patched\src\vkvg_device.c">
       <Link>vkvg\src\vkvg_device.c</Link>
       <ObjectFileName>$(IntDir)vkvg_device.obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(ProjectDir)vkvg\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(IntDir)vkvg-patched\vkh\src;$(ProjectDir)vkvg\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <ClCompile Include="$(IntDir)vkvg-patched\src\vkvg_device_internal.c">
       <Link>vkvg\src\vkvg_device_internal.c</Link>
       <ObjectFileName>$(IntDir)vkvg_device_internal.obj</ObjectFileName>
-      <AdditionalIncludeDirectories>$(ProjectDir)vkvg\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(IntDir)vkvg-patched\vkh\src;$(ProjectDir)vkvg\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <ClCompile Include="vkvg\src\vkvg_experimental.c" />
-    <ClCompile Include="vkvg\src\vkvg_fonts.c" />
+    <ClCompile Include="$(IntDir)vkvg-patched\src\vkvg_fonts.c">
+      <Link>vkvg\src\vkvg_fonts.c</Link>
+      <ObjectFileName>$(IntDir)vkvg_fonts.obj</ObjectFileName>
+      <AdditionalIncludeDirectories>$(ProjectDir)vkvg\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
     <ClCompile Include="vkvg\src\vkvg_matrix.c" />
     <ClCompile Include="vkvg\src\vkvg_pattern.c" />
+    <ClCompile Include="source_image.c">
+      <AdditionalIncludeDirectories>$(ProjectDir)vkvg\src;$(ProjectDir)vkvg\vkh\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
     <ClCompile Include="vkvg\src\vkvg_surface.c" />
     <ClCompile Include="vkvg\src\vkvg_surface_internal.c" />
-    <ClCompile Include="vkvg\vkh\src\vkhelpers.c" />
+    <ClCompile Include="$(IntDir)vkvg-patched\vkh\src\vkhelpers.c">
+      <Link>vkvg\vkh\src\vkhelpers.c</Link>
+      <ObjectFileName>$(IntDir)vkhelpers.obj</ObjectFileName>
+      <AdditionalIncludeDirectories>$(IntDir)vkvg-patched\vkh\src;$(ProjectDir)vkvg\vkh\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
     <ClCompile Include="vkvg\vkh\src\vkh_app.c" />
     <ClCompile Include="vkvg\vkh\src\vkh_buffer.c" />
     <ClCompile Include="vkvg\vkh\src\vkh_device.c" />
@@ -210,7 +242,11 @@
     </ClCompile>
     <ClCompile Include="vkvg\vkh\src\vkh_phyinfo.c" />
     <ClCompile Include="vkvg\vkh\src\vkh_presenter.c" />
-    <ClCompile Include="vkvg\vkh\src\vkh_queue.c" />
+    <ClCompile Include="$(IntDir)vkvg-patched\vkh\src\vkh_queue.c">
+      <Link>vkvg\vkh\src\vkh_queue.c</Link>
+      <ObjectFileName>$(IntDir)vkh_queue.obj</ObjectFileName>
+      <AdditionalIncludeDirectories>$(IntDir)vkvg-patched\vkh\src;$(ProjectDir)vkvg\vkh\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="vkvg.def" />

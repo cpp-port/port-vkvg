@@ -14,10 +14,15 @@ set(staged_output_dir "${TEST_OUTPUT_DIR}/staged")
 set(patch_dir "${WRAPPER_DIR}/patches")
 set(materializer "${patch_dir}/materialize_vkvg_sources.cmake")
 set(relative_sources
+  src/vkvg_context.c
   src/vkvg_context_internal.c
+  src/vkvg_fonts.c
   src/vkvg_device.c
   src/vkvg_device_internal.c
-  vkh/src/vkh_image.c)
+  vkh/src/vkh_image.c
+  vkh/src/vkh_queue.c
+  vkh/src/vkh_queue.h
+  vkh/src/vkhelpers.c)
 
 find_package(Git REQUIRED)
 file(REMOVE_RECURSE "${TEST_OUTPUT_DIR}")
@@ -82,7 +87,21 @@ if(NOT gitlink_result EQUAL 0 OR
   message(FATAL_ERROR "Unexpected VKVG gitlink: ${gitlink}\n${gitlink_error}")
 endif()
 
+file(READ "${staged_output_dir}/src/vkvg_context.c" public_context_source)
+string(FIND "${public_context_source}" "const float k = 0.2652164898395440f;" ellipse_handle_position)
+string(FIND "${public_context_source}" "for (int i = 0; i < 8; ++i)" ellipse_segments_position)
+string(FIND "${public_context_source}" "width_two_thirds" old_ellipse_position)
+if(ellipse_handle_position EQUAL -1 OR ellipse_segments_position EQUAL -1 OR
+   NOT old_ellipse_position EQUAL -1)
+  message(FATAL_ERROR "Materialized ellipses must use eight 45-degree cubic segments")
+endif()
+string(FIND "${public_context_source}"
+  "vkvg_matrix_transform_point(&inverse, &cp.x, &cp.y);" curve_inverse_position)
+if(curve_inverse_position EQUAL -1)
+  message(FATAL_ERROR "Materialized curves must convert the device-space start point back to user space")
+endif()
 file(READ "${staged_output_dir}/src/vkvg_context_internal.c" context_source)
+file(READ "${staged_output_dir}/src/vkvg_fonts.c" fonts_source)
 file(READ "${staged_output_dir}/src/vkvg_device.c" device_source)
 file(READ "${staged_output_dir}/src/vkvg_device_internal.c" device_internal_source)
 file(READ "${staged_output_dir}/vkh/src/vkh_image.c" vkh_image_source)
@@ -96,12 +115,51 @@ endif()
 
 foreach(required_text
   "float signedArea = 0.0f;"
-  "ecp_zcross(v0, v2, v1) * signedArea < 0")
+  "ecp_zcross(v0, v2, v1) * signedArea < 0"
+  "if (strcmp(ctx->selectedFontName, name) != 0)"
+  "ctx->currentFont = NULL;"
+  "ctx->currentFontSize = NULL;")
   string(FIND "${context_source}" "${required_text}" position)
   if(position EQUAL -1)
     message(FATAL_ERROR "Missing staged winding fix: ${required_text}")
   endif()
 endforeach()
+
+foreach(required_text
+  "Transfer the saved-state reference to the context"
+  "sav->pattern = NULL;")
+  string(FIND "${public_context_source}" "${required_text}" position)
+  if(position EQUAL -1)
+    message(FATAL_ERROR "Missing staged saved-pattern ownership fix: ${required_text}")
+  endif()
+endforeach()
+
+string(FIND "${public_context_source}"
+  "else\n            vkvg_pattern_destroy(sav->pattern);" double_release_position)
+if(NOT double_release_position EQUAL -1)
+  message(FATAL_ERROR "Restored pattern reference is still released twice")
+endif()
+
+foreach(required_text
+  "Text measurement also populates charLookup"
+  "_flush_chars_to_tex(textRun->dev, textRun->font);"
+  "UNLOCK_FONTCACHE(ctx->dev)")
+  string(FIND "${fonts_source}" "${required_text}" position)
+  if(position EQUAL -1)
+    message(FATAL_ERROR "Missing staged measured-glyph flush fix: ${required_text}")
+  endif()
+endforeach()
+
+string(FIND "${fonts_source}"
+  "void _font_cache_create_text_run" create_text_run_position)
+string(SUBSTRING "${fonts_source}" ${create_text_run_position} -1 create_text_run_source)
+string(FIND "${create_text_run_source}"
+  "_flush_chars_to_tex(textRun->dev, textRun->font);" measured_flush_position)
+string(FIND "${create_text_run_source}"
+  "UNLOCK_FONTCACHE(ctx->dev)" cache_unlock_position)
+if(measured_flush_position GREATER cache_unlock_position)
+  message(FATAL_ERROR "Measured glyphs must flush before releasing the font-cache lock")
+endif()
 
 string(FIND "${device_source}"
   "if (!(counts & info->samples))" sample_guard)
@@ -142,16 +200,29 @@ foreach(required_text
   "Name=\"MaterializeVkvgPatchedSources\""
   "BeforeTargets=\"ClCompile\""
   "<VkvgPatchOutputDir>$(IntDir)vkvg-patched</VkvgPatchOutputDir>"
+  "$(IntDir)vkvg-patched\\src\\vkvg_context.c"
   "$(IntDir)vkvg-patched\\src\\vkvg_context_internal.c"
+  "$(IntDir)vkvg-patched\\src\\vkvg_fonts.c"
   "$(IntDir)vkvg-patched\\src\\vkvg_device.c"
   "$(IntDir)vkvg-patched\\src\\vkvg_device_internal.c"
   "$(IntDir)vkvg-patched\\vkh\\src\\vkh_image.c"
   "<ObjectFileName>$(IntDir)vkvg_context_internal.obj</ObjectFileName>"
+  "<ObjectFileName>$(IntDir)vkvg_context.obj</ObjectFileName>"
+  "<ObjectFileName>$(IntDir)vkvg_fonts.obj</ObjectFileName>"
   "<ObjectFileName>$(IntDir)vkvg_device.obj</ObjectFileName>"
   "<ObjectFileName>$(IntDir)vkvg_device_internal.obj</ObjectFileName>"
   "<ObjectFileName>$(IntDir)vkh_image.obj</ObjectFileName>"
   "0005-preserve-queue-family-before-free.patch"
   "0006-implement-non-vma-image-mapping.patch"
+  "0007-refresh-selected-font-cache-pointers.patch"
+  "0008-flush-measured-glyphs-before-cache-reuse.patch"
+  "0009-transfer-restored-pattern-reference.patch"
+  "0010-coordinate-external-queue-host-access.patch"
+  "0011-coordinate-queue-idle-host-access.patch"
+  "0012-destroy-font-cache-mutex-once.patch"
+  "ClCompile Include=\"vkvg\\src\\deps\\tinycthread.c\""
+  "$(IntDir)vkvg-patched\\vkh\\src\\vkh_queue.c"
+  "$(IntDir)vkvg-patched\\vkh\\src\\vkhelpers.c"
   "<AdditionalIncludeDirectories>$(ProjectDir)vkvg\\vkh\\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>"
   "materialize_vkvg_sources.cmake")
   string(FIND "${vcxproj}" "${required_text}" position)
@@ -161,7 +232,7 @@ foreach(required_text
 endforeach()
 
 set(generated_source_include
-  "<AdditionalIncludeDirectories>$(ProjectDir)vkvg\\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>")
+  "$(ProjectDir)vkvg\\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>")
 set(generated_source_include_count 0)
 set(remaining_vcxproj "${vcxproj}")
 while(TRUE)
@@ -173,16 +244,20 @@ while(TRUE)
   string(SUBSTRING "${remaining_vcxproj}" ${next_position} -1 remaining_vcxproj)
   math(EXPR generated_source_include_count "${generated_source_include_count} + 1")
 endwhile()
-if(NOT generated_source_include_count EQUAL 3)
+if(NOT generated_source_include_count EQUAL 5)
   message(FATAL_ERROR
     "Each generated Visual Studio source needs the pristine vkvg/src include path")
 endif()
 
 foreach(pristine_source
+  "vkvg\\src\\vkvg_context.c"
   "vkvg\\src\\vkvg_context_internal.c"
+  "vkvg\\src\\vkvg_fonts.c"
   "vkvg\\src\\vkvg_device.c"
   "vkvg\\src\\vkvg_device_internal.c"
-  "vkvg\\vkh\\src\\vkh_image.c")
+  "vkvg\\vkh\\src\\vkh_image.c"
+  "vkvg\\vkh\\src\\vkh_queue.c"
+  "vkvg\\vkh\\src\\vkhelpers.c")
   string(FIND "${vcxproj}" "ClCompile Include=\"${pristine_source}\"" position)
   if(NOT position EQUAL -1)
     message(FATAL_ERROR "Visual Studio compiles pristine patched source: ${pristine_source}")
@@ -214,7 +289,7 @@ foreach(target_declaration
 endforeach()
 
 string(FIND "${wrapper_cmake}"
-  "LIST (APPEND VKVG_SRC \${SVG_SRC} \${VKH_SRC})" append_vkh_position)
+  "LIST (APPEND VKVG_SRC \${SVG_SRC} \${VKH_SRC} source_image.c)" append_vkh_position)
 string(FIND "${wrapper_cmake}"
   "list(REMOVE_ITEM VKVG_SRC \${VKVG_PRISTINE_PATCHED_SOURCES})" remove_pristine_position)
 if(append_vkh_position EQUAL -1 OR

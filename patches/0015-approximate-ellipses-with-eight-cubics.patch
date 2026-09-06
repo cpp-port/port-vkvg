@@ -1,0 +1,62 @@
+--- a/src/vkvg_context.c
++++ b/src/vkvg_context.c
+@@ -1639,28 +1639,33 @@
+-    float width_two_thirds = radiusX * 4 / 3;
+-
+-    float dx1 = sinf(rotationAngle) * radiusY;
+-    float dy1 = cosf(rotationAngle) * radiusY;
+-    float dx2 = cosf(rotationAngle) * width_two_thirds;
+-    float dy2 = sinf(rotationAngle) * width_two_thirds;
+-
+-    float topCenterX = x - dx1;
+-    float topCenterY = y + dy1;
+-    float topRightX  = topCenterX + dx2;
+-    float topRightY  = topCenterY + dy2;
+-    float topLeftX   = topCenterX - dx2;
+-    float topLeftY   = topCenterY - dy2;
+-
+-    float bottomCenterX = x + dx1;
+-    float bottomCenterY = y - dy1;
+-    float bottomRightX  = bottomCenterX + dx2;
+-    float bottomRightY  = bottomCenterY + dy2;
+-    float bottomLeftX   = bottomCenterX - dx2;
+-    float bottomLeftY   = bottomCenterY - dy2;
+-
+-    _finish_path(ctx);
+-    _add_point(ctx, bottomCenterX, bottomCenterY);
+-
+-    _curve_to(ctx, bottomRightX, bottomRightY, topRightX, topRightY, topCenterX, topCenterY);
+-    _curve_to(ctx, topLeftX, topLeftY, bottomLeftX, bottomLeftY, bottomCenterX, bottomCenterY);
++    // Eight 45-degree cubics: k = 4/3 * tan(pi/16). Two semicircle
++    // cubics bulge by 1.835% of the radius, visibly rotating against raster rings.
++    // Fixed endpoints make the final endpoint exactly equal to the first.
++    static const float unit[9][2] = {
++        {0.0f, -1.0f}, {0.7071067811865475f, -0.7071067811865475f},
++        {1.0f, 0.0f}, {0.7071067811865475f, 0.7071067811865475f},
++        {0.0f, 1.0f}, {-0.7071067811865475f, 0.7071067811865475f},
++        {-1.0f, 0.0f}, {-0.7071067811865475f, -0.7071067811865475f},
++        {0.0f, -1.0f}
++    };
++    const float k = 0.2652164898395440f;
++    const float c = cosf(rotationAngle);
++    const float s = sinf(rotationAngle);
++
++    _finish_path(ctx);
++    _add_point(ctx, x + s * radiusY, y - c * radiusY);
++    for (int i = 0; i < 8; ++i) {
++        const float u0 = unit[i][0], v0 = unit[i][1];
++        const float u1 = unit[i + 1][0], v1 = unit[i + 1][1];
++        // Tangent on the unit circle is (-v, u); scale it with the ellipse.
++        const float x1 = radiusX * (u0 - k * v0);
++        const float y1 = radiusY * (v0 + k * u0);
++        const float x2 = radiusX * (u1 + k * v1);
++        const float y2 = radiusY * (v1 - k * u1);
++        const float x3 = radiusX * u1, y3 = radiusY * v1;
++        _curve_to(ctx, x + c * x1 - s * y1, y + s * x1 + c * y1,
++                       x + c * x2 - s * y2, y + s * x2 + c * y2,
++                       x + c * x3 - s * y3, y + s * x3 + c * y3);
++        if (vkvg_status(ctx))
++            return;
++    }
+ 
+     ctx->pathes[ctx->pathPtr] |= PATH_CLOSED_BIT;

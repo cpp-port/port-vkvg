@@ -1,0 +1,20 @@
+diff --git a/src/vkvg_context.c b/src/vkvg_context.c
+--- a/src/vkvg_context.c
++++ b/src/vkvg_context.c
+@@ -1516,10 +1516,13 @@ void vkvg_restore(VkvgContext ctx) {
+     ctx->textDirection = sav->textDirection;
+ 
+     if (sav->pattern) {
+-        if (sav->pattern != ctx->pattern)
++        if (sav->pattern != ctx->pattern) {
+             _update_cur_pattern(ctx, sav->pattern);
+-        else
+-            vkvg_pattern_destroy(sav->pattern);
++            /* _update_cur_pattern adopts the pointer without adding a
++             * reference. Transfer the saved-state reference to the context
++             * so _free_ctx_save does not release it a second time. */
++            sav->pattern = NULL;
++        }
+     } else {
+         ctx->curColor = sav->curColor;
+         _update_cur_pattern(ctx, NULL);

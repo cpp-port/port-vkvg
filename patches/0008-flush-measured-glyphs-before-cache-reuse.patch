@@ -1,0 +1,17 @@
+diff --git a/src/vkvg_fonts.c b/src/vkvg_fonts.c
+index b8d89ad..c0b4f79 100644
+--- a/src/vkvg_fonts.c
++++ b/src/vkvg_fonts.c
+@@ -670,6 +670,12 @@ void _font_cache_create_text_run(VkvgContext ctx, const char *text, int length,
+     }
+     free(tmp);
+ #endif
++
++    // Text measurement also populates charLookup and the shared staging buffer.
++    // Commit that batch while its owning font and cache lock are still current;
++    // otherwise measuring another font can reuse the buffer and leave these
++    // glyphs marked as cached even though their atlas region was never uploaded.
++    _flush_chars_to_tex(textRun->dev, textRun->font);
+ 
+     UNLOCK_FONTCACHE(ctx->dev)
+ 
